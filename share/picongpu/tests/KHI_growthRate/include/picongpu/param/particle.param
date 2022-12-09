@@ -27,7 +27,7 @@
 #include <pmacc/math/operation.hpp>
 
 #ifndef PARAM_GAMMA
-#    define PARAM_GAMMA 1.021
+#    define PARAM_GAMMA 1.2
 #endif
 
 namespace picongpu

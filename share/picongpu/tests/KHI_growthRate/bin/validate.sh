@@ -62,7 +62,9 @@ if [ -z "$dataPath" ] ; then
 fi
 
 # test for growth rate
-MAINTEST="$inputSetPath/lib/python/test/KHI_growthRate"
+MAINTEST="$inputSetPath/lib/python/test/setups/MI"
 
-python $MAINTEST/MainTest.py $inputSetPath/include/picongpu/param/ $dataPath/
+python $MAINTEST/main.py -p "$inputSetPath/include/picongpu/param/" -r "$dataPath" -s "$dataPath"
 exit $?
+
+
