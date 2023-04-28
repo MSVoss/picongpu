@@ -64,8 +64,11 @@ parser.add_argument("-j", help="Path of the folder to the json files"
 args = parser.parse_args()
 
 # start testsuite with all parameter
-manager.run_testsuite(dataDirection=args.data,
-                      paramDirection=args.param,
-                      jsonDirection=args.json,
-                      resultDirection=args.result,
-                      openPMDDirection=args.openPMD)
+#manager.run_testsuite(dataDirection=args.data,
+#                      paramDirection=args.param,
+#                      jsonDirection=args.json,
+#                      resultDirection=args.result,
+#                      openPMDDirection=args.openPMD)
+import testsuite as ts
+obj = ts.Reader.paramReader.ParamReader(direction="/bigdata/hplsim/scratch/voss29/myFirst_PIConGPU_runs/runs/thermal/temperature/t=test51/input/include/picongpu/param/")
+print(obj.getValue(parameter="temperature"))

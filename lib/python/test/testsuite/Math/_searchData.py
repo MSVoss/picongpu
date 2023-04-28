@@ -13,6 +13,10 @@ searchParameter(parameter:str, directiontype:str = None)
 __all__ = ["searchParameter"]
 
 from .. import Reader
+from .. import Reader.dataReader
+from .. import Reader.jsonReader
+from .. import Reader.paramReader
+from .. import Reader.openPMDReader
 import warnings
 
 

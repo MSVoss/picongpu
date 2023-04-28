@@ -13,17 +13,20 @@ import testsuite.Output.Log as log
 def run_testsuite(dataDirection,
                   paramDirection,
                   jsonDirection,
-                  resultDirection):
-    try:
+                  resultDirection,
+                  openPMDDirection):
+    #try:
         # read the Data
         from .Reader import _manager as read
 
-        json, param, data = read.mainsearch(dataDirection,
-                                            paramDirection,
-                                            jsonDirection)
+        json, param, data, openPMD = read.mainsearch(dataDirection,
+                                                     paramDirection,
+                                                     jsonDirection,
+                                                     openPMDDirection)
 
         # now we can determine the theory and simulation
-        parameter = {**json, **param, **data}
+        parameter = {**json, **param, **data, **openPMD}
+        print(parameter)
         theory = Data.theory(**parameter)
         simData = Data.simData(**parameter)
 
@@ -43,5 +46,5 @@ def run_testsuite(dataDirection,
                        direction=resultDirection,
                        parameter=parameter)
 
-    except Exception:
-        log.errorLog()
+    #except Exception:
+        #log.errorLog()

@@ -18,345 +18,287 @@ getParam(parameter:str, direction:str = None) -> list
 paramInLine(parameter:str, filename, direction:str = None) -> dict
 """
 
-__all__ = ["paramInLine",
-           "checkParamFilesInDir",
-           "getAllParam",
-           "getParam",
-           "getValue"]
+__all__ = ["ParamReader"]
 
 import os
 import testsuite._checkData as cD
-from . import jsonReader as js
+from . import jsonReader
 import warnings
+from . import readFiles as rF
 
+class ParamReader(rF.ReadFiles):
+    
+    def __init__(self, fileExtension: str = r".param",
+                 direction: str = None,
+                 directiontype: str = None):
+        """
+        constructor
+        
+        Input:
+        -------
+        fileExtension : str, optional
+                        The file extension to search for
+                        (e.g. .dat, .param, .json,...)
+                        Default: r".param"
+        
+        direction :     str, optional
+                        Directory of the files, the value from
+                        Data.py is used. Must only be set if Data.py is
+                        not used or directiontype is not set there
+                        Default: None
 
-# private functions -> no documentation
-def __checkIfDefination(line: str, parameter) -> bool:
-    if "=" in line:
-        if parameter in line.partition("=")[0]:
-            return True
+        directiontype : str, optional
+                        Is the designation of the variable in 
+                        Data.py for the directory
+                        (e.g dataDirection, jsonDirection)
+                        Default: None
+        
+        Raise:
+        -------
+        TypeError: If neither a directory nor a directiontype was passed
+        """
+        
+        super().__init__(fileExtension, direction, directiontype)
+        
+    # private functions -> no documentation
+    def __checkifDefination(self, line: str, parameter) -> bool:
+        if "=" in line:
+            if parameter in line.partition("=")[0]:
+                return True
+            else:
+                return False
         else:
             return False
-    else:
-        return False
-
-
-def __calculateIfNoDef(parameter: str, direction: str) -> float:
-    if "PARAM_" in parameter:
-        search_u = parameter.upper()
-        parameter = parameter.split("_")[-1]
-    else:
-        search_u = "PARAM_" + parameter.upper()
-    try:
-        # first search in json
-        if js.getAllJSONFiles():
-            if (js.getJSONwithParam(parameter.lower()) or
-                    js.getJSONwithParam(parameter.upper())):
-                return js.getValue(parameter)
-
-    except Exception:
-        # search for if not defined
-        direction = cD.checkDirection(variable="paramDirection",
-                                      direction=direction)
-
-        all_paramFiles = getParam(parameter, direction)
-
-        if len(all_paramFiles) > 1:
-            warnings.warn("Multiple files could be found"
-                          " with an \"undefined block\" for"
-                          " the same parameter.")
-
-        parameter = None
-
-        for filename in all_paramFiles:
-            all_Lines = paramInLine(search_u,
-                                    filename,
-                                    direction).values()
-
-            for line in all_Lines:
-                if "define" + search_u in line and parameter is None:
-                    parameter = float(line[line.find(search_u) +
-                                      len(search_u) + 1: -2])
-        return parameter
-
-
-def __calculateOperations(line: str, direction: str, value=0) -> float:
-    if "+" in line:
-        split = line.partition("+")
-
-        value = float(split[0])
-        value_2 = __calculateResult(split[2], direction)
-
-        return value + value_2
-
-    elif "*" in line:
-        split = line.partition("*")
-
-        value = float(split[0])
-        value_2 = __calculateResult(split[2], direction)
-        return value * value_2
-
-    elif "-" in line:
-        split = line.partition("-")
-
-        value = float(split[0])
-        value_2 = __calculateResult(split[2], direction)
-        return value - value_2
-
-    elif "/" in line:
-        split = line.partition("/")
-
-        value = float(split[0])
-        value_2 = __calculateResult(split[2], direction)
-        return value / value_2
-
-
-def __calculateResult(line: str, direction: str) -> float:
-    result = None
-
-    if ";" in line:
-        line = line[:-2]
-
-    # it is assumed to be a defining line
-    if ("=" not in line and ("+" in line or "*" in line or
-                             "/" in line or "-" in line)):
-        result = __calculateOperations(line, direction)
-
-    elif ("=" not in line):
+        
+    def __calculateIfNoDef(self, parameter: str) -> float:
+        if "PARAM_" in parameter:
+            search_u = parameter.upper()
+            parameter = parameter.split("_")[-1]
+        else:
+            search_u = "PARAM_" + parameter.upper()
         try:
-            result = float(line)
+            jsonReader = jsonReader.JSONReader()
+            # first search in json
+            if jsonReader.getAllFiles():
+                if (jsonReader.getJSONwithParam(parameter.lower()) or
+                        jsonReader.getJSONwithParam(parameter.upper())):
+                    return jsonReader.getValue(parameter)
+
         except Exception:
+            # search for if not defined
 
-            # check if there is a if no defined block in the .param files
-            ifno = getParam(line, direction)
+            all_paramFiles = self.getParam(parameter, self._direction)
 
-            if ifno and "PARAM_" in line:
-                result = __calculateIfNoDef(line, direction)
+            if len(all_paramFiles) > 1:
+                warnings.warn("Multiple files could be found"
+                              " with an \"undefined block\" for"
+                              " the same parameter.")
 
-            if result is None:
-                result = getValue(line, direction)
+            parameter = None
 
-    if "=" in line:
-        result = __calculateResult(line.partition("=")[2], direction)
+            for filename in all_paramFiles:
+                all_Lines = self.paramInLine(search_u,
+                                             filename,
+                                             direction).values()
 
-    return result
+                for line in all_Lines:
+                    if "define" + search_u in line and parameter is None:
+                        parameter = float(line[line.find(search_u) +
+                                          len(search_u) + 1: -2])
+            return parameter
+        
+    def __calculateOperations(self, line: str,value=0) -> float:
+    
+        if "+" in line:
+            split = line.partition("+")
 
+            value = float(split[0])
+            value_2 = self.__calculateResult(split[2])
 
-def paramInLine(parameter: str, filename, direction: str = None) -> dict:
-    """
-    Returns the lines in which the parameter is located
+            return value + value_2
 
-    Input:
-    -------
-    parameter : str
+        elif "*" in line:
+            split = line.partition("*")
 
-    filename :  str
-                name of the .param file in which to search
-                for the parameter
+            value = float(split[0])
+            value_2 = self.__calculateResult(split[2])
+            return value * value_2
 
-    direction : str
-                path to the .param file
+        elif "-" in line:
+            split = line.partition("-")
 
-    Raise:
-    -------
-    ValueError:
-        the parameter could not be found
+            value = float(split[0])
+            value_2 = self.__calculateResult(split[2])
+            return value - value_2
 
-    Return:
-    -------
-    out : dict
-          Line number in which the parameter was found
-          and the context of the line
-    """
+        elif "/" in line:
+            split = line.partition("/")
 
-    direction = cD.checkDirection(variable="paramDirection",
-                                  direction=direction)
+            value = float(split[0])
+            value_2 = self.__calculateResult(split[2])
+            return value / value_2
+        
+    def __calculateResult(self, line: str) -> float:
+        result = None
 
-    result = {}
+        if ";" in line:
+            line = line[:-2]
 
-    lines = open(direction + filename, 'r')
+        # it is assumed to be a defining line
+        if ("=" not in line and "e" in line and "-" in line):
+            try:
+                result = float(line)
+            except:
+                result = self.__calculateOperations(line)
+        elif ("=" not in line and ("+" in line or "*" in line or
+                                   "/" in line or "-" in line)):
+            result = self.__calculateOperations(line)
 
-    allLines = lines.readlines()
+        elif ("=" not in line):
+            try:
+                result = float(line)
+            except Exception:
 
-    number = 0
+                # check if there is a if no defined block in the .param files
+                ifno = self.getParam(line)
 
-    for line in allLines:
-        number += 1
+                if ifno and "PARAM_" in line:
+                    result = self.__calculateIfNoDef(line)
 
-        if parameter in line:
-            result[number] = line
+                if result is None:
+                    result = self.getValue(line)
 
-    if not result:
-        raise ValueError("The parameter {}"
-                         " could not be found".format(parameter))
-    else:
+        if "=" in line:
+            result = self.__calculateResult(line.partition("=")[2])
         return result
+    
+    def paramInLine(self, parameter: str, filename) -> dict:
+        """
+        Returns the lines in which the parameter is located
 
+        Input:
+        -------
+        parameter : str
 
-def checkParamFilesInDir(direction: str = None) -> bool:
-    """
-    checks if there are .param files in the directory
+        filename :  str
+                    name of the .param file in which to search
+                    for the parameter
 
-    Input:
-    -------
-    direction : str, optional
-                Directory of the .param files, the value from
-                Data.py is used. Must only be set if Data.py is
-                not used or paramDirectory is not set there
+        Raise:
+        -------
+        ValueError:
+            the parameter could not be found
 
-    Return:
-    -------
-    out : bool
-          True if there are .param files in the specified directory,
-          False otherwise
-    """
+        Return:
+        -------
+       out : dict
+             Line number in which the parameter was found
+             and the context of the line
+        """
 
-    direction = cD.checkDirection(variable="paramDirection",
-                                  direction=direction)
+        result = {}
 
-    # fixed value, just search for .param
-    fileExt = r".param"
+        lines = open(self._direction + filename, 'r')
 
-    all_files = [_ for _ in os.listdir(direction) if _.endswith(fileExt)]
+        allLines = lines.readlines()
 
-    if all_files:
-        return True
-    else:
-        return False
+        number = 0
 
+        for line in allLines:
+            number += 1
 
-def getAllParam(direction: str = None) -> list:
-    """
-    returns all .param files from the directory
+            if parameter in line:
+                result[number] = line
 
-    Input:
-    -------
-    direction : str, optional
-                Directory of the .param files, the value from
-                Data.py is used. Must only be set if Data.py is
-                not used or paramDirectory is not set there
+        if not result:
+            raise ValueError("The parameter {}"
+                             " could not be found".format(parameter))
+        else:
+            return result
+        
+    def getParam(self, parameter: str) -> list:
+        """
+        returns all .param files in which the parameter is present
 
-    Return:
-    -------
-    out : list
-          List of all names of .param files
-    """
+        Input:
+        -------
+        parameter : str
+                    Name of the value to be searched for
 
-    direction = cD.checkDirection(variable="paramDirection",
-                                  direction=direction)
+        Raise:
+        -------
+        ValueError:
+            If no .param files could be found in the specified directory
 
-    # fixed value, just search for .param
-    fileExt = r".param"
+        Return:
+        -------
+        out : list
+              List with the names of all .param files in which the
+              parameter could be found.
+        """
 
-    return [_ for _ in os.listdir(direction) if _.endswith(fileExt)]
+        searchResult = []
 
+        # check if there are .param Files
+        if not self.checkFilesInDir():
+            raise ValueError("No .param files could be found in the"
+                             " specified directory. Note: The directory"
+                             " from Data.py may have been used (if Data.py"
+                             " defined).")
 
-def getParam(parameter: str, direction: str = None) -> list:
-    """
-    returns all .param files in which the parameter is present
+        for file in self.getAllFiles():
+            fileParam = open(self._direction + file, 'r')
 
-    Input:
-    -------
-    parameter : str
-                Name of the value to be searched for
+            if (fileParam.read().find(parameter) != -1):
 
-    direction : str, optional
-                Directory of the .param files, the value from
-                Data.py is used. Must only be set if Data.py is
-                not used or paramDirectory is not set there
+                searchResult.append(file)
 
-    Use:
-    -------
-    checkParamFilesInDir
+            fileParam.close()
 
-    getAllParam
+        return searchResult
+    
+    def getValue(self, parameter: str):
+        """
+        returns the value of the searched parameter
 
-    Raise:
-    -------
-    ValueError:
-        If no .param files could be found in the specified directory
+        Input:
+        ------
+        parameter : str
+                    Name of the value to be searched for
 
-    Return:
-    -------
-    out : list
-          List with the names of all .param files in which the
-          parameter could be found.
-    """
+        Use:
+        -------
+        getParam
 
-    searchResult = []
+        paramInLine
 
-    direction = cD.checkDirection(variable="paramDirection",
-                                  direction=direction)
+        Raise:
+        -------
+        ValueError:
+            If the parameter could not be found or more than one value
+            was found
 
-    # check if there are .param Files
-    if not checkParamFilesInDir(direction):
-        raise ValueError("No .param files could be found in the"
-                         " specified directory. Note: The directory"
-                         " from Data.py may have been used (if Data.py"
-                         " defined).")
+        Return:
+        -------
+        out : float
+              value of the parameter, None if it is not possible
+              to read the value
+        """
 
-    for file in getAllParam(direction):
-        fileParam = open(direction + file, 'r')
+        if not self.getParam(parameter):
+            raise ValueError("No .param file containing the"
+                             " parameter.")
 
-        if (fileParam.read().find(parameter) != -1):
+        all_paramFiles = self.getParam(parameter)
+        for filename in all_paramFiles:
+            all_Lines = self.paramInLine(parameter, filename).values()
+            for line in self.paramInLine(parameter, filename).values():
+                if self.__checkifDefination(line, parameter):
+                    value = self.__calculateResult(line)
 
-            searchResult.append(file)
+        if "value" not in locals():
+            raise ValueError("The parameter searched for could not be read."
+                             " If Data.py is used, please use the interfaces"
+                             " provided there to transfer the parameter.")
 
-        fileParam.close()
-
-    return searchResult
-
-
-def getValue(parameter: str, direction: str = None):
-    """
-    returns the value of the searched parameter
-
-    Input:
-    ------
-    parameter : str
-                Name of the value to be searched for
-
-    direction : str, optional
-                Directory of the .param files, the value from
-                Data.py is used. Must only be set if Data.py is
-                not used or paramDirectory is not set there
-
-    Use:
-    -------
-    getParam
-
-    paramInLine
-
-    Raise:
-    -------
-    ValueError:
-        If the parameter could not be found or more than one value
-        was found
-
-    Return:
-    -------
-    out : float
-          value of the parameter, None if it is not possible
-          to read the value
-    """
-
-    direction = cD.checkDirection(variable="paramDirection",
-                                  direction=direction)
-
-    if not getParam(parameter, direction):
-        raise ValueError("No .param file containing the"
-                         " parameter.")
-
-    all_paramFiles = getParam(parameter, direction)
-    for filename in all_paramFiles:
-        all_Lines = paramInLine(parameter, filename, direction).values()
-        for line in paramInLine(parameter, filename, direction).values():
-            if __checkIfDefination(line, parameter):
-                value = __calculateResult(line, direction)
-
-    if "value" not in locals():
-        raise ValueError("The parameter searched for could not be read."
-                         " If Data.py is used, please use the interfaces"
-                         " provided there to transfer the parameter.")
-
-    return value
+        return value

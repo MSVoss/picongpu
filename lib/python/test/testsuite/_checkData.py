@@ -38,7 +38,7 @@ else:
     import Data
 
 
-def checkDirection(variable: str = "undefined",
+def checkDirection(variable: str = None,
                    direction: str = None,
                    errorhandling: bool = False) -> str:
     """
@@ -85,18 +85,15 @@ def checkDirection(variable: str = "undefined",
 
     """
 
-    val_name = "Data." + variable
-
     # Since the variable does not necessarily have to be set,
     # this must be checked beforehand
-    if variable in dir(Data):
-        val = eval(val_name)
+    if (variable is not None and variable in dir(Data)):
+        val = eval("Data." + variable)
     else:
         val = None
 
     # check if at least one direction is given
     # if there are two use Data.py value
-
     if val is not None and direction is not None:
         warnings.warn("Both " + variable + " and direction are set."
                       "Note that the value from Data.py is used.")

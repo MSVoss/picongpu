@@ -36,9 +36,14 @@ for reading data:
 from . import paramReader
 from . import jsonReader
 from . import dataReader
-# from . import cmakeflagReader
+from . import readFiles
+from . import openPMDReader
 
-__all__ = ["paramReader", "jsonReader", "dataReader"]
+__all__ = ["paramReader", "jsonReader",
+           "dataReader", "openPMDReader",
+           "readFiles"]
 __all__ += paramReader.__all__
 __all__ += jsonReader.__all__
 __all__ += dataReader.__all__
+__all__ += openPMDReader.__all__
+__all__ += readFiles.__all__
